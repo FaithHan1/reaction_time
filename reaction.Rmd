@@ -1,0 +1,217 @@
+---
+title: "Group_project"
+output:
+  pdf_document: default
+  html_document: default
+date: "2024-05-08"
+---
+
+```{r setup, include=FALSE,echo=FALSE,warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+library(tidyverse)
+library(tidyr)
+library(readr)
+library(ggplot2)
+Survey= read_csv("C:/ProgramData/Microsoft/Windows/Start Menu/Programs/RStudio/Survey.csv",show_col_types = FALSE)
+```
+
+**Data Exploration**
+
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+#load the data
+library(tidyverse)
+library(readr)
+data <- read_csv("C:/ProgramData/Microsoft/Windows/Start Menu/Programs/RStudio/Survey.csv",show_col_types = FALSE)
+data_n=data
+#head(data)
+summary(data)
+```
+
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+dim(data)
+```
+
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+plot(data[1:ncol(data)-1])
+
+```
+
+Correlation Plot.
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+library(corrplot)
+numeric_data <- data[sapply(data, is.numeric)]
+corr <- cor(numeric_data)
+corrplot(corr)
+```
+**DATA Visualization**
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+# Reaction Time by Distraction
+ggplot(data, aes(x = Distraction, y = Reaction.time, fill = Distraction)) +
+  geom_boxplot() +
+  labs(title = "Reaction Time by Distraction", x = "Distraction", y = "Reaction Time (ms)") +
+  scale_fill_manual(values = c("Yes" = "light blue", "No" = "light green"))
+
+# Reaction Time by Temperature Level
+ggplot(data_n, aes(x = Temp.level, y = Reaction.time, fill = Temp.level)) +
+  geom_boxplot() +
+  labs(title = "Reaction Time by Temperature Level", x = "Temperature Level", y = "Reaction Time (ms)") +
+  scale_fill_brewer(palette = "Spectral")
+
+# Reaction Time by Noise Level
+ggplot(data, aes(x = Noise.level, y = Reaction.time)) +
+  geom_point(aes(color = Noise.level)) +
+  geom_smooth(method = "lm", aes(color = Noise.level), se = FALSE) +
+  labs(title = "Reaction Time vs. Noise Level", x = "Noise Level", y = "Reaction Time (ms)") +
+  scale_color_gradient(low = "blue", high = "yellow")
+
+ggplot(data, aes(x = Age, y = Reaction.time)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("Reaction Time by Age")
+
+
+
+```
+Numeric Summary:
+
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+# Summary statistics for Reaction.time
+reaction_time_summary <- summary(data$Reaction.time)
+print(reaction_time_summary)
+
+# Summary statistics for Noise.level
+noise_level_summary <- summary(data$Noise.level)
+print(noise_level_summary)
+
+# Frequency table for Distraction
+distraction_summary <- table(data$Distraction)
+print(distraction_summary)
+
+# Frequency table for Temp.level
+temp_level_summary <- table(data$Temp.level)
+print(temp_level_summary)
+
+```
+
+**Creating Dummy Variables**
+
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+
+ #List of variables for which dummy variables need to be created
+variables <- c("Stress.level", "Fatigue.level", "Distraction", "Temp.level", "Game.freq", "Sport.freq", "Class", 
+               "Caffein.intake", "Alcohol.intake", "Visual.acuity", "Primary.hand", "Use.primary.hand", 
+               "Input.device", "Cautious.level", "Device.OS", "WiFi.stable")
+
+# Create dummy variables and concatenate with the original dataframe
+for (variable in variables) {
+  dummy_variables <- model.matrix(~ . - 1, data = data[variable])
+  colnames(dummy_variables) <- paste0(variable, ".", colnames(dummy_variables))
+  data <- cbind(data, dummy_variables)
+}
+# Remove original categorical variables
+data <- data[, !names(data) %in% variables]
+
+```
+**Variable Selection**
+
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+
+# Fit the full model with reaction time as the dependent variable
+full_model <- lm(Reaction.time ~ ., data = data)
+# Perform stepwise selection starting with the full model
+stepwise_model <- step(full_model, direction="both", trace=0) 
+
+
+# Commented because it is too long.
+
+
+# Summary of the selected model
+#summary(stepwise_model)
+# Check the final model's variables
+coef(stepwise_model)
+```
+
+Model Summary:
+Multiple R-squared: 0.5443:
+Adjusted R-squared: 0.3555
+F-statistic (2.884 on 41 and 99 DF, p-value: 9.672e-06)
+
+Significant Variables:
+Age, last.night.sleep.time, and several levels of Fatigue.level show statistically significant effects on reaction time.
+Visual acuity (Excellent, Good) significantly affects reaction time, indicating that individuals with better visual acuity tend to have faster reaction times.
+Use of primary hand and WiFi stability also appear to be significant predictors.
+Temperature level (Neutral) significantly affects reaction time.
+
+
+**Model Building**
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+#Model fitting
+
+# Model 1: Main effects only
+#model1 <- lm(Reaction.time ~ Age + Distraction.DistractionNo + Distraction.DistractionYes+ Noise.level + Temp.level.Temp.levelCold + Temp.level.Temp.levelNeutral+ Temp.level.Temp.levelVery Cold +Temp.level.Temp.levelVeryWarm+ Temp.level.Temp.levelWarm, data = data)
+model1 <- lm(Reaction.time ~ Age + Distraction + Noise.level + Temp.level, data = data_n)
+
+# Model 2: Interaction terms between Age and Distraction, and between Noise level and Temp level
+model2 <- lm(Reaction.time ~ Age * Distraction + Noise.level * Temp.level, data = data_n)
+
+# Model 3: All main effects and various interaction terms
+model3 <- lm(Reaction.time ~ .,data=data)
+    
+```
+
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+# Model Summaries
+
+# This is too big 
+
+#summary(model1)
+#summary(model2)
+#summary(model3)
+```
+
+Significant finidings:
+Model 1 revealed a significant effect of the Distraction variable, indicating that not being distracted correlates with a decrease in reaction time, which makes intuitive sense.
+
+Model 2 and Model 3 highlighted significant effects for Age and an interaction between Age and Cold temperature level, respectively. These findings suggest that age impacts reaction time, particularly in cold environments. This is plausible as both age and environmental conditions can affect physiological and cognitive responses.
+
+
+**Model Diagnostics**
+
+
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+
+library(faraway)
+n=141; p=74;
+g = lm(Reaction.time ~., data=Survey)
+lev=influence(g)$hat
+lev[lev>2*p/n]
+
+halfnorm(lev, 4, labs=row.names(Survey), ylab="Leverages")
+
+```
+
+# There are no high leverage points.
+
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+
+jack=rstudent(g); 
+qt(.05/(2*n), 44)
+sort(abs(jack), decreasing=TRUE)[1:5]
+
+Survey<-Survey[-91,]
+```
+
+# The point with 91 reaction time is an outlier. It needs to be removed.
+
+# Checking for Influential Points
+
+```{r,eval=TRUE,warning=FALSE,echo=FALSE}
+library(faraway)
+cook = cooks.distance(g)
+max(cook)
+halfnorm(cook, labs=row.names(Survey), ylab="Cook's distances")
+
+```
